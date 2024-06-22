@@ -1,0 +1,44 @@
+version: "3.8"
+
+networks:
+  master-thesis-network:
+    driver: bridge
+    external: true
+
+volumes:
+  vault-data:
+    name: vault-data
+
+services:
+  vault-server:
+    image: vault:1.12.1
+    container_name: vault-server
+    hostname: vault-server
+    volumes:
+      - ./config.hcl:/vault/config/config.hcl
+      - vault-data:/vault/file/
+    networks:
+      - master-thesis-network
+    environment:
+      - VAULT_ADDR=http://0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    command: server
+    restart: always
+
+  vault-init:
+    image: vault:1.12.1
+    container_name: vault-init
+    environment:
+      - VAULT_ADDR=http://vault-server:8200
+      - CURRENT_TOKEN=jdas81213ndsanjdsa21321d
+    volumes:
+      - ./vault-root-token:/vault/file/vault-root-token
+      - ./vault-init.sh:/usr/local/bin/vault-init.sh
+      - vault-data:/vault/file/
+    networks:
+      - master-thesis-network
+    command: /usr/local/bin/vault-init.sh
+    restart: on-failure
+    depends_on:
+      - vault-server
